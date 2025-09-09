@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ação Cidadã - Web App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <div id="app">
+
+        <!-- =================================== -->
+        <!-- =========== TELA DE LOGIN =========== -->
+        <!-- =================================== -->
+        <main id="login-page" class="flex items-center justify-center min-h-screen">
+            <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md m-4">
+                <div class="text-center mb-8">
+                    <h1 class="text-3xl font-bold text-gray-800">Ação Cidadã</h1>
+                    <p class="text-gray-500 mt-2">Conectando cidadãos e gestão pública.</p>
+                </div>
+
+                <div class="mb-6">
+                    <div class="flex border-b">
+                        <button id="login-type-user" class="login-type-btn flex-1 py-2 text-center font-semibold text-indigo-600 border-b-2 border-indigo-600">Cidadão</button>
+                        <button id="login-type-authority" class="login-type-btn flex-1 py-2 text-center font-semibold text-gray-500">Autoridade</button>
+                        <button id="login-type-admin" class="login-type-btn flex-1 py-2 text-center font-semibold text-gray-500">Admin</button>
+                    </div>
+                </div>
+
+                <form id="login-form">
+                    <div class="mb-4">
+                        <label for="email" class="block text-gray-700 font-medium mb-2">Email</label>
+                        <input type="email" id="email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="seuemail@exemplo.com" required>
+                    </div>
+                    <div class="mb-6">
+                        <label for="password" class="block text-gray-700 font-medium mb-2">Senha</label>
+                        <input type="password" id="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="********" required>
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition duration-300">Entrar</button>
+                    <p id="login-error" class="text-red-500 text-sm text-center mt-2 hidden">Email ou senha incorretos.</p>
+                </form>
+
+                <div class="text-center mt-6">
+                    <a href="#" class="text-indigo-600 hover:underline">Não tem uma conta? Cadastre-se</a>
+                </div>
+            </div>
+        </main>
+
+        <!-- =================================== -->
+        <!-- =========== TELA HOME USUÁRIO =========== -->
+        <!-- =================================== -->
+        <main id="home-user-page" class="hidden">
+            <header class="bg-white shadow-md sticky top-0 z-10 p-4 flex justify-between items-center">
+                <h1 class="text-2xl font-bold text-indigo-600">Ação Cidadã</h1>
+                <div class="flex items-center space-x-4">
+                    <span id="user-greeting" class="font-medium text-gray-700"></span>
+                    <button id="logout-btn-user" class="text-gray-500 hover:text-indigo-600"><i class="fas fa-sign-out-alt fa-lg"></i></button>
+                </div>
+            </header>
+
+            <div id="feed-container" class="max-w-2xl mx-auto py-6 px-4">
+                <!-- Eventos serão inseridos aqui pelo JavaScript -->
+            </div>
+
+            <button id="create-event-btn" class="fixed bottom-6 right-6 bg-indigo-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg hover:bg-indigo-700 transition">
+                <i class="fas fa-plus fa-2x"></i>
+            </button>
+        </main>
+        
+        <!-- Template de Card de Evento -->
+        <template id="event-card-template">
+            <div class="bg-white rounded-2xl shadow-md mb-6 overflow-hidden">
+                <div class="p-4">
+                    <div class="flex items-center mb-3">
+                        <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-indigo-600 mr-3">
+                            <span class="user-initial"></span>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-gray-800 event-creator"></p>
+                            <p class="text-sm text-gray-500 event-address"></p>
+                        </div>
+                    </div>
+                    <p class="text-gray-700 mb-4 event-description"></p>
+                </div>
+                <img class="w-full h-64 object-cover event-image" src="" alt="Imagem do Evento">
+                <div class="p-4">
+                    <div class="flex justify-between items-center text-gray-600">
+                        <div class="flex items-center">
+                            <i class="fas fa-bullhorn text-red-500 mr-2"></i>
+                            <span class="event-complaints font-medium">0 reclamações</span>
+                        </div>
+                        <div class="flex space-x-6">
+                            <button class="complain-btn flex items-center space-x-2 text-gray-600 hover:text-indigo-600 transition">
+                                <i class="far fa-thumbs-up"></i> <span>Reclamar</span>
+                            </button>
+                             <button class="comments-btn flex items-center space-x-2 text-gray-600 hover:text-indigo-600 transition">
+                                <i class="far fa-comment"></i> <span>Comentar</span>
+                            </button>
+                             <button class="report-btn flex items-center space-x-2 text-gray-600 hover:text-red-500 transition">
+                                <i class="far fa-flag"></i> <span>Denunciar</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+
+        <!-- =================================== -->
+        <!-- ====== TELA CRIAR EVENTO (MODAL) ====== -->
+        <!-- =================================== -->
+        <div id="create-event-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-20 p-4">
+            <div class="bg-white rounded-2xl shadow-lg w-full max-w-lg">
+                <div class="p-6 border-b">
+                    <h2 class="text-2xl font-bold text-gray-800">Relatar um Problema</h2>
+                </div>
+                
+                <form id="create-event-form" class="p-6">
+                    <!-- Barra de Progresso -->
+                    <div class="mb-6">
+                        <div class="bg-gray-200 rounded-full h-2.5">
+                            <div id="progress-bar" class="bg-indigo-600 h-2.5 rounded-full" style="width: 33%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Etapa 1: Descrição -->
+                    <div id="form-step-1">
+                        <h3 class="font-semibold text-lg mb-4 text-gray-700">1. O que está acontecendo?</h3>
+                        <div class="mb-4">
+                            <label for="event-title" class="block text-gray-700 font-medium mb-2">Título do Problema</label>
+                            <input type="text" id="event-title" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Ex: Buraco na via" required>
+                        </div>
+                        <div class="mb-4">
+                            <label for="event-description" class="block text-gray-700 font-medium mb-2">Descrição Detalhada</label>
+                            <textarea id="event-description" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Descreva o problema com o máximo de detalhes." required></textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- Etapa 2: Localização e Mídia -->
+                    <div id="form-step-2" class="hidden">
+                        <h3 class="font-semibold text-lg mb-4 text-gray-700">2. Onde está acontecendo?</h3>
+                        <div class="mb-4">
+                            <label for="event-address-input" class="block text-gray-700 font-medium mb-2">Endereço</label>
+                            <input type="text" id="event-address-input" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Rua, Número, Bairro, Cidade" required>
+                        </div>
+                        <div class="mb-4">
+                             <label for="event-image-upload" class="block text-gray-700 font-medium mb-2">Foto do Problema</label>
+                             <input type="file" id="event-image-upload" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" accept="image/*">
+                        </div>
+                    </div>
+
+                    <!-- Etapa 3: Revisão -->
+                     <div id="form-step-3" class="hidden">
+                        <h3 class="font-semibold text-lg mb-4 text-gray-700">3. Revise e Envie</h3>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <p class="font-semibold text-gray-800" id="review-title"></p>
+                            <p class="text-sm text-gray-600" id="review-address"></p>
+                            <p class="mt-2 text-gray-700" id="review-description"></p>
+                        </div>
+                    </div>
+
+                    <!-- Botões de Navegação do Formulário -->
+                    <div class="flex justify-between mt-8">
+                        <button type="button" id="prev-step-btn" class="bg-gray-300 text-gray-800 py-2 px-6 rounded-lg font-semibold hover:bg-gray-400 transition hidden">Voltar</button>
+                        <button type="button" id="next-step-btn" class="bg-indigo-600 text-white py-2 px-6 rounded-lg font-semibold hover:bg-indigo-700 transition">Próximo</button>
+                        <button type="submit" id="submit-event-btn" class="bg-green-600 text-white py-2 px-6 rounded-lg font-semibold hover:bg-green-700 transition hidden">Enviar Relato</button>
+                         <button type="button" id="cancel-event-btn" class="bg-red-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-red-600 transition ml-auto">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- =================================== -->
+        <!-- ======= TELA DE ADMINISTRADOR ======= -->
+        <!-- =================================== -->
+        <main id="admin-page" class="hidden">
+            <header class="bg-white shadow-md sticky top-0 z-10 p-4 flex justify-between items-center">
+                <h1 class="text-2xl font-bold text-indigo-600">Painel do Administrador</h1>
+                <button id="logout-btn-admin" class="text-gray-500 hover:text-indigo-600"><i class="fas fa-sign-out-alt fa-lg"></i></button>
+            </header>
+            <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                <!-- Seção de Aprovação de Eventos -->
+                <div class="mb-10">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Eventos Pendentes de Aprovação</h2>
+                    <div id="pending-events-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Cards de eventos pendentes aqui -->
+                    </div>
+                </div>
+
+                <!-- Seção de Gerenciamento de Usuários -->
+                <div>
+                     <h2 class="text-2xl font-bold text-gray-800 mb-4">Gerenciar Usuários</h2>
+                     <div class="bg-white shadow-md rounded-2xl overflow-hidden">
+                        <table class="min-w-full leading-normal">
+                            <thead>
+                                <tr>
+                                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nome</th>
+                                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Email</th>
+                                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Tipo</th>
+                                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-table-body">
+                                <!-- Linhas da tabela de usuários aqui -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <template id="pending-event-card-template">
+            <div class="bg-white rounded-2xl shadow-md p-4 flex flex-col">
+                <p class="font-bold text-gray-800 event-title"></p>
+                <p class="text-sm text-gray-500 mb-2 event-address"></p>
+                <p class="text-gray-600 text-sm flex-grow event-description"></p>
+                <div class="flex justify-end space-x-2 mt-4">
+                    <button class="deny-btn bg-red-500 text-white px-4 py-1 rounded-lg text-sm font-semibold hover:bg-red-600 transition">Recusar</button>
+                    <button class="approve-btn bg-green-500 text-white px-4 py-1 rounded-lg text-sm font-semibold hover:bg-green-600 transition">Aprovar</button>
+                </div>
+            </div>
+        </template>
+        
+        <template id="user-row-template">
+            <tr>
+                <td class="px-5 py-4 border-b border-gray-200 bg-white text-sm">
+                    <p class="text-gray-900 whitespace-no-wrap user-name"></p>
+                </td>
+                <td class="px-5 py-4 border-b border-gray-200 bg-white text-sm">
+                     <p class="text-gray-900 whitespace-no-wrap user-email"></p>
+                </td>
+                <td class="px-5 py-4 border-b border-gray-200 bg-white text-sm">
+                     <span class="relative inline-block px-3 py-1 font-semibold leading-tight user-role-badge">
+                        <span aria-hidden class="absolute inset-0 opacity-50 rounded-full"></span>
+                        <span class="relative user-role"></span>
+                    </span>
+                </td>
+                <td class="px-5 py-4 border-b border-gray-200 bg-white text-sm">
+                    <button class="text-indigo-600 hover:text-indigo-900 mr-4">Editar</button>
+                    <button class="text-red-600 hover:text-red-900">Remover</button>
+                </td>
+            </tr>
+        </template>
+
+
+        <!-- =================================== -->
+        <!-- ========= TELA DE AUTORIDADE ======== -->
+        <!-- =================================== -->
+        <main id="authority-page" class="hidden">
+             <header class="bg-white shadow-md sticky top-0 z-10 p-4 flex justify-between items-center">
+                <h1 class="text-2xl font-bold text-indigo-600">Painel da Autoridade</h1>
+                <button id="logout-btn-authority" class="text-gray-500 hover:text-indigo-600"><i class="fas fa-sign-out-alt fa-lg"></i></button>
+            </header>
+            <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Eventos Atribuídos</h2>
+                <div id="authority-events-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Cards de eventos para autoridade aqui -->
+                </div>
+            </div>
+        </main>
+        
+        <template id="authority-event-card-template">
+             <div class="bg-white rounded-2xl shadow-md p-4 flex flex-col">
+                <p class="font-bold text-gray-800 event-title"></p>
+                <p class="text-sm text-gray-500 mb-2 event-address"></p>
+                <div class="mb-2">
+                    <span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full event-status-badge">
+                        Status
+                    </span>
+                </div>
+                <p class="text-gray-600 text-sm flex-grow event-description"></p>
+                <div class="flex justify-end space-x-2 mt-4">
+                    <button class="bg-blue-500 text-white px-4 py-1 rounded-lg text-sm font-semibold hover:bg-blue-600 transition">Detalhes</button>
+                    <button class="resolve-btn bg-green-500 text-white px-4 py-1 rounded-lg text-sm font-semibold hover:bg-green-600 transition">Concluir</button>
+                </div>
+            </div>
+        </template>
+        
+        <!-- Modal Genérico para Notificações -->
+        <div id="notification-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-30 p-4">
+            <div class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-sm text-center">
+                <p id="notification-message" class="text-lg text-gray-800 mb-4"></p>
+                <button id="notification-ok-btn" class="bg-indigo-600 text-white py-2 px-6 rounded-lg font-semibold hover:bg-indigo-700 transition">OK</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // ===================================
+        // =========== BANCO DE DADOS (MOCK) ===========
+        // ===================================
+        const mockDatabase = {
+            users: [
+                { id: 1, name: 'Vitor Gabriel', email: 'vitor@email.com', password: '123', type: 'user' },
+                { id: 2, name: 'Ana Pereira', email: 'ana@email.com', password: '123', type: 'user' },
+                { id: 3, name: 'Policial Silva', email: 'policia@email.com', password: '123', type: 'authority' },
+                { id: 4, name: 'Admin Geral', email: 'admin@email.com', password: '123', type: 'admin' },
+            ],
+            events: [
+                { id: 1, creatorId: 1, title: 'Buraco gigante na rua principal', description: 'Existe um buraco perigoso na Avenida Brasil, próximo ao número 500, que já causou acidentes com motociclistas.', address: 'Avenida Brasil, 500 - Centro', imageUrl: 'https://placehold.co/600x400/cccccc/ffffff?text=Buraco+na+Rua', complaints: 12, status: 'approved' },
+                { id: 2, creatorId: 2, title: 'Poste de luz queimado', description: 'O poste em frente à praça está com a luz queimada há semanas, deixando a área muito escura e perigosa à noite.', address: 'Praça da Matriz - Centro', imageUrl: 'https://placehold.co/600x400/333333/ffffff?text=Poste+Apagado', complaints: 5, status: 'approved' },
+                { id: 3, creatorId: 1, title: 'Lixo acumulado em terreno baldio', description: 'Há um grande acúmulo de lixo e entulho em um terreno na Rua das Flores, atraindo ratos e insetos para a vizinhança.', address: 'Rua das Flores, 123 - Bairro Jardim', imageUrl: 'https://placehold.co/600x400/964B00/ffffff?text=Lixo+Acumulado', complaints: 8, status: 'pending' },
+                { id: 4, creatorId: 2, title: 'Vazamento de Água', description: 'Vazamento de água limpa na calçada, desperdiçando muita água.', address: 'Rua XV de Novembro, 800', imageUrl: 'https://placehold.co/600x400/0000FF/ffffff?text=Vazamento', complaints: 2, status: 'resolved' },
+            ]
+        };
+
+        // ===================================
+        // =========== ESTADO DA APLICAÇÃO ===========
+        // ===================================
+        const appState = {
+            currentUser: null,
+            currentLoginType: 'user', // 'user', 'authority', 'admin'
+            currentFormStep: 1,
+        };
+        
+        // ===================================
+        // =========== SELETORES DE ELEMENTOS ===========
+        // ===================================
+        const pages = {
+            login: document.getElementById('login-page'),
+            homeUser: document.getElementById('home-user-page'),
+            admin: document.getElementById('admin-page'),
+            authority: document.getElementById('authority-page'),
+        };
+        
+        const loginForm = document.getElementById('login-form');
+        const createEventModal = document.getElementById('create-event-modal');
+        const createEventForm = document.getElementById('create-event-form');
+        const notificationModal = document.getElementById('notification-modal');
+        const notificationMessage = document.getElementById('notification-message');
+        const notificationOkBtn = document.getElementById('notification-ok-btn');
+
+        // ===================================
+        // =========== LÓGICA DE NAVEGAÇÃO ===========
+        // ===================================
+        function navigateTo(page) {
+            Object.values(pages).forEach(p => p.classList.add('hidden'));
+            if (pages[page]) {
+                pages[page].classList.remove('hidden');
+            }
+        }
+
+        // ===================================
+        // =========== FUNÇÕES DE RENDERIZAÇÃO ===========
+        // ===================================
+        
+        // Renderizar Feed do Usuário
+        function renderUserFeed() {
+            const feedContainer = document.getElementById('feed-container');
+            const template = document.getElementById('event-card-template');
+            feedContainer.innerHTML = '';
+            
+            const approvedEvents = mockDatabase.events.filter(e => e.status === 'approved' || e.status === 'resolved');
+
+            approvedEvents.forEach(event => {
+                const creator = mockDatabase.users.find(u => u.id === event.creatorId);
+                const card = template.content.cloneNode(true);
+
+                card.querySelector('.user-initial').textContent = creator.name.charAt(0);
+                card.querySelector('.event-creator').textContent = creator.name;
+                card.querySelector('.event-address').textContent = event.address;
+                card.querySelector('.event-description').textContent = event.description;
+                card.querySelector('.event-image').src = event.imageUrl;
+                card.querySelector('.event-complaints').textContent = `${event.complaints} reclamações`;
+                
+                const complainBtn = card.querySelector('.complain-btn');
+                complainBtn.addEventListener('click', () => {
+                    event.complaints++;
+                    renderUserFeed();
+                });
+
+                card.querySelector('.comments-btn').addEventListener('click', () => showNotification('Funcionalidade de comentários em desenvolvimento.'));
+                card.querySelector('.report-btn').addEventListener('click', () => showNotification('Evento denunciado. Nossa equipe irá analisar.'));
+
+                feedContainer.appendChild(card);
+            });
+            document.getElementById('user-greeting').textContent = `Olá, ${appState.currentUser.name}!`;
+        }
+        
+        // Renderizar Painel do Administrador
+        function renderAdminDashboard() {
+            renderPendingEvents();
+            renderUsersTable();
+        }
+
+        // Renderizar Eventos Pendentes para Admin
+        function renderPendingEvents() {
+            const container = document.getElementById('pending-events-container');
+            const template = document.getElementById('pending-event-card-template');
+            container.innerHTML = '';
+
+            const pendingEvents = mockDatabase.events.filter(e => e.status === 'pending');
+            if (pendingEvents.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 col-span-full">Nenhum evento pendente.</p>';
+                return;
+            }
+
+            pendingEvents.forEach(event => {
+                const card = template.content.cloneNode(true);
+                card.querySelector('.event-title').textContent = event.title;
+                card.querySelector('.event-address').textContent = event.address;
+                card.querySelector('.event-description').textContent = event.description;
+
+                card.querySelector('.approve-btn').addEventListener('click', () => {
+                    event.status = 'approved';
+                    showNotification(`Evento "${event.title}" aprovado!`);
+                    renderAdminDashboard();
+                });
+                card.querySelector('.deny-btn').addEventListener('click', () => {
+                    mockDatabase.events = mockDatabase.events.filter(e => e.id !== event.id);
+                    showNotification(`Evento "${event.title}" recusado.`);
+                    renderAdminDashboard();
+                });
+
+                container.appendChild(card);
+            });
+        }
+
+        // Renderizar Tabela de Usuários para Admin
+        function renderUsersTable() {
+            const tableBody = document.getElementById('users-table-body');
+            const template = document.getElementById('user-row-template');
+            tableBody.innerHTML = '';
+            
+            mockDatabase.users.forEach(user => {
+                const row = template.content.cloneNode(true);
+                row.querySelector('.user-name').textContent = user.name;
+                row.querySelector('.user-email').textContent = user.email;
+                
+                const roleBadge = row.querySelector('.user-role-badge');
+                const roleText = row.querySelector('.user-role');
+                roleText.textContent = user.type;
+
+                if (user.type === 'admin') {
+                    roleBadge.classList.add('text-red-900');
+                    roleBadge.firstElementChild.classList.add('bg-red-200');
+                } else if (user.type === 'authority') {
+                    roleBadge.classList.add('text-blue-900');
+                    roleBadge.firstElementChild.classList.add('bg-blue-200');
+                } else {
+                    roleBadge.classList.add('text-green-900');
+                    roleBadge.firstElementChild.classList.add('bg-green-200');
+                }
+                
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // Renderizar Painel da Autoridade
+        function renderAuthorityDashboard() {
+             const container = document.getElementById('authority-events-container');
+             const template = document.getElementById('authority-event-card-template');
+             container.innerHTML = '';
+
+             const assignedEvents = mockDatabase.events.filter(e => e.status === 'approved' || e.status === 'resolved');
+             
+             assignedEvents.forEach(event => {
+                const card = template.content.cloneNode(true);
+                card.querySelector('.event-title').textContent = event.title;
+                card.querySelector('.event-address').textContent = event.address;
+                card.querySelector('.event-description').textContent = event.description;
+                
+                const statusBadge = card.querySelector('.event-status-badge');
+                const resolveBtn = card.querySelector('.resolve-btn');
+
+                if (event.status === 'resolved') {
+                    statusBadge.textContent = 'Resolvido';
+                    statusBadge.classList.add('bg-green-200', 'text-green-800');
+                    resolveBtn.disabled = true;
+                    resolveBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
+                    resolveBtn.classList.remove('hover:bg-green-600');
+                } else {
+                    statusBadge.textContent = 'Em Aberto';
+                    statusBadge.classList.add('bg-yellow-200', 'text-yellow-800');
+                    resolveBtn.addEventListener('click', () => {
+                        event.status = 'resolved';
+                        showNotification(`Evento "${event.title}" marcado como resolvido.`);
+                        renderAuthorityDashboard();
+                    });
+                }
+                
+                container.appendChild(card);
+             });
+        }
+
+        // ===================================
+        // =========== LÓGICA DE LOGIN/LOGOUT ===========
+        // ===================================
+
+        // Trocar tipo de login
+        document.querySelectorAll('.login-type-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.login-type-btn').forEach(b => {
+                    b.classList.remove('text-indigo-600', 'border-indigo-600');
+                    b.classList.add('text-gray-500');
+                });
+                e.target.classList.add('text-indigo-600', 'border-indigo-600');
+                e.target.classList.remove('text-gray-500');
+                appState.currentLoginType = e.target.id.split('-')[2];
+            });
+        });
+
+        // Submeter formulário de login
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const loginError = document.getElementById('login-error');
+
+            const user = mockDatabase.users.find(u => u.email === email && u.password === password && u.type === appState.currentLoginType);
+
+            if (user) {
+                appState.currentUser = user;
+                loginError.classList.add('hidden');
+                switch(user.type) {
+                    case 'user':
+                        navigateTo('homeUser');
+                        renderUserFeed();
+                        break;
+                    case 'admin':
+                        navigateTo('admin');
+                        renderAdminDashboard();
+                        break;
+                    case 'authority':
+                        navigateTo('authority');
+                        renderAuthorityDashboard();
+                        break;
+                }
+            } else {
+                loginError.classList.remove('hidden');
+            }
+        });
+        
+        // Logout
+        function logout() {
+            appState.currentUser = null;
+            loginForm.reset();
+            navigateTo('login');
+        }
+
+        document.getElementById('logout-btn-user').addEventListener('click', logout);
+        document.getElementById('logout-btn-admin').addEventListener('click', logout);
+        document.getElementById('logout-btn-authority').addEventListener('click', logout);
+
+
+        // ===================================
+        // ====== LÓGICA DE CRIAR EVENTO ======
+        // ===================================
+        document.getElementById('create-event-btn').addEventListener('click', () => {
+            createEventModal.classList.remove('hidden');
+        });
+
+        document.getElementById('cancel-event-btn').addEventListener('click', () => {
+            createEventForm.reset();
+            appState.currentFormStep = 1;
+            updateFormStep();
+            createEventModal.classList.add('hidden');
+        });
+
+        const formSteps = [
+            document.getElementById('form-step-1'),
+            document.getElementById('form-step-2'),
+            document.getElementById('form-step-3'),
+        ];
+        const progressBar = document.getElementById('progress-bar');
+        const prevBtn = document.getElementById('prev-step-btn');
+        const nextBtn = document.getElementById('next-step-btn');
+        const submitBtn = document.getElementById('submit-event-btn');
+
+        function updateFormStep() {
+            formSteps.forEach((step, index) => {
+                step.classList.toggle('hidden', index + 1 !== appState.currentFormStep);
+            });
+            
+            progressBar.style.width = `${(appState.currentFormStep / formSteps.length) * 100}%`;
+            
+            prevBtn.classList.toggle('hidden', appState.currentFormStep === 1);
+            nextBtn.classList.toggle('hidden', appState.currentFormStep === formSteps.length);
+            submitBtn.classList.toggle('hidden', appState.currentFormStep !== formSteps.length);
+        }
+
+        nextBtn.addEventListener('click', () => {
+            if (appState.currentFormStep < formSteps.length) {
+                if (appState.currentFormStep === formSteps.length - 1) {
+                    // Populate review
+                    document.getElementById('review-title').textContent = document.getElementById('event-title').value;
+                    document.getElementById('review-address').textContent = document.getElementById('event-address-input').value;
+                    document.getElementById('review-description').textContent = document.getElementById('event-description').value;
+                }
+                appState.currentFormStep++;
+                updateFormStep();
+            }
+        });
+
+        prevBtn.addEventListener('click', () => {
+            if (appState.currentFormStep > 1) {
+                appState.currentFormStep--;
+                updateFormStep();
+            }
+        });
+        
+        createEventForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const newEvent = {
+                id: mockDatabase.events.length + 1,
+                creatorId: appState.currentUser.id,
+                title: document.getElementById('event-title').value,
+                description: document.getElementById('event-description').value,
+                address: document.getElementById('event-address-input').value,
+                imageUrl: 'https://placehold.co/600x400/cccccc/ffffff?text=Novo+Evento',
+                complaints: 0,
+                status: 'pending',
+            };
+            mockDatabase.events.push(newEvent);
+            
+            // Reset and close modal
+            document.getElementById('cancel-event-btn').click();
+
+            // Show confirmation
+            showNotification('Seu relato foi enviado e aguarda aprovação de um administrador. Obrigado!');
+        });
+        
+        // ===================================
+        // ====== LÓGICA DE NOTIFICAÇÕES ======
+        // ===================================
+        function showNotification(message) {
+            notificationMessage.textContent = message;
+            notificationModal.classList.remove('hidden');
+        }
+        
+        notificationOkBtn.addEventListener('click', () => {
+            notificationModal.classList.add('hidden');
+        });
+
+
+        // ===================================
+        // =========== INICIALIZAÇÃO ===========
+        // ===================================
+        navigateTo('login');
+    });
+    </script>
+</body>
+</html>
+ z
