@@ -2,23 +2,18 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
-const https = require('https');
 
 const app = express();
 
 // --- Configuração de Segurança (CORS) ---
-// Esta configuração é crucial. Ela diz ao navegador que o seu frontend,
-// localizado em 'https://vitorgabrieldossantosg.github.io', tem permissão
-// para fazer pedidos a este servidor.
+// Embora o Nginx agora trate do CORS, mantemos isto como uma
+// segunda camada de segurança e para facilitar os testes locais.
 const corsOptions = {
   origin: 'https://vitorgabrieldossantosg.github.io',
   optionsSuccessStatus: 200 
 };
-
-// É importante que o app.use(cors(corsOptions)) venha ANTES das suas rotas.
 app.use(cors(corsOptions));
-
-app.use(express.json({ limit: '10mb' })); // Aumenta o limite para o upload de imagens
+app.use(express.json({ limit: '10mb' }));
 
 // --- Caminho para a base de dados ---
 const dbPath = path.join(__dirname, 'db.json');
@@ -243,15 +238,10 @@ apiRouter.post('/events/:eventId/comments', (req, res) => {
 // --- Usar o router da API ---
 app.use('/api', apiRouter);
 
-// --- Configuração do Servidor HTTPS ---
-const httpsOptions = {
-    key: fs.readFileSync(`/etc/letsencrypt/live/app-acao-cidada-vitor.duckdns.org/privkey.pem`),
-    cert: fs.readFileSync(`/etc/letsencrypt/live/app-acao-cidada-vitor.duckdns.org/fullchain.pem`)
-};
+// --- Configuração do Servidor HTTP ---
+const PORT = 3000;
 
-const PORT = 443;
-
-https.createServer(httpsOptions, app).listen(PORT, () => {
-    console.log(`Servidor HTTPS a rodar de forma segura na porta ${PORT}`);
+app.listen(PORT, () => {
+    console.log(`Servidor HTTP a rodar na porta ${PORT}, à espera do proxy Nginx.`);
 });
 
