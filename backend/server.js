@@ -1,56 +1,51 @@
 const express = require('express');
-const fs = require('fs');
+const fs = require('fs').promises;
+const path = require('path');
 const cors = require('cors');
-const path = require('path'); // Importa o módulo 'path' do Node.js
 
 const app = express();
-const PORT = 3000;
-const DB_FILE = './db.json';
+app.use(express.json({ limit: '10mb' }));
 
-app.use(cors());
-app.use(express.json({ limit: '10mb' })); // Aumenta o limite para aceitar imagens em base64
+const dbPath = path.join(__dirname, 'db.json');
 
-// --- NOVO: Servir os arquivos estáticos do frontend ---
-// Isso diz ao Express para servir qualquer arquivo da pasta 'frontend'
-const frontendPath = path.join(__dirname, '..', 'frontend');
-app.use(express.static(frontendPath));
-// ----------------------------------------------------
+// --- Configuração do CORS ---
+// ATUALIZADO: Agora permite requisições do seu GitHub Pages.
+const corsOptions = {
+  origin: 'https://vitorgabrieldossantosg.github.io', 
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
+// -------------------------
 
-
-// Função para ler o banco de dados
-const readDB = () => {
-    const data = fs.readFileSync(DB_FILE, 'utf-8');
-    return JSON.parse(data);
+const readDb = async () => {
+    const dbRaw = await fs.readFile(dbPath, 'utf-8');
+    return JSON.parse(dbRaw);
 };
 
-// Função para escrever no banco de dados
-const writeDB = (data) => {
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
+const writeDb = async (data) => {
+    await fs.writeFile(dbPath, JSON.stringify(data, null, 2));
 };
 
-// ===================================
-// =========== ROTAS DE AUTENTICAÇÃO ===========
-// ===================================
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
     const { email, password, type } = req.body;
-    const db = readDB();
+    const db = await readDb();
     const user = db.users.find(u => u.email === email && u.password === password && u.type === type);
-    
     if (user) {
-        res.status(200).json(user);
+        const { password, ...userWithoutPassword } = user;
+        res.json(userWithoutPassword);
     } else {
         res.status(401).json({ message: 'Credenciais inválidas' });
     }
 });
 
-app.post('/api/auth/register', (req, res) => {
+app.post('/api/auth/register', async (req, res) => {
     const { name, email, password, type, code } = req.body;
-    const db = readDB();
+    const db = await readDb();
 
     if (db.users.some(u => u.email === email)) {
-        return res.status(400).json({ message: 'Este email já está em uso.' });
+        return res.status(400).json({ message: 'O email já está em uso.' });
     }
-    
+
     if (type === 'admin' && code !== 'admin123') {
         return res.status(403).json({ message: 'Código de acesso de Admin inválido.' });
     }
@@ -65,112 +60,119 @@ app.post('/api/auth/register', (req, res) => {
         password,
         type
     };
-
     db.users.push(newUser);
-    writeDB(db);
-    res.status(201).json(newUser);
+    await writeDb(db);
+    res.status(201).json({ message: 'Utilizador registado com sucesso!' });
 });
 
-
-// ===================================
-// =========== ROTAS DE EVENTOS ===========
-// ===================================
-
-// Listar todos os usuários
-app.get('/api/users', (req, res) => {
-    const db = readDB();
-    res.status(200).json(db.users);
+app.get('/api/users', async (req, res) => {
+    const db = await readDb();
+    const users = db.users.map(({ password, ...user }) => user);
+    res.json(users);
 });
 
-
-// Criar um novo evento
-app.post('/api/events', (req, res) => {
-    const { creatorId, title, description, address, imageUrls } = req.body;
-    const db = readDB();
-
-    const newEvent = {
-        id: db.events.length > 0 ? Math.max(...db.events.map(e => e.id)) + 1 : 1,
-        creatorId,
-        title,
-        description,
-        address,
-        imageUrls,
-        complaints: 0,
-        status: 'pending' // 'pending', 'approved', 'denied', 'resolved'
-    };
-
-    db.events.push(newEvent);
-    writeDB(db);
-    res.status(201).json(newEvent);
-});
-
-// Obter eventos aprovados (para o feed)
-app.get('/api/events/approved', (req, res) => {
-    const db = readDB();
+app.get('/api/events/approved', async (req, res) => {
+    const db = await readDb();
     const approvedEvents = db.events
         .filter(e => e.status === 'approved' || e.status === 'resolved')
         .map(event => {
             const creator = db.users.find(u => u.id === event.creatorId);
-            return { ...event, creator: { id: creator.id, name: creator.name } };
-        })
-        .reverse(); // Mostra os mais recentes primeiro
-    res.status(200).json(approvedEvents);
+            const { password, ...creatorInfo } = creator || { name: 'Desconhecido' };
+            const commentCount = db.comments.filter(c => c.eventId === event.id).length;
+            return { ...event, creator: creatorInfo, commentCount };
+        });
+    res.json(approvedEvents);
 });
 
-// Obter eventos pendentes (para admin)
-app.get('/api/events/pending', (req, res) => {
-    const db = readDB();
-    const pendingEvents = db.events.filter(e => e.status === 'pending');
-    res.status(200).json(pendingEvents);
+app.get('/api/events/pending', async (req, res) => {
+    const db = await readDb();
+    res.json(db.events.filter(e => e.status === 'pending'));
 });
 
-// Obter eventos para autoridade
-app.get('/api/events/assigned', (req, res) => {
-    const db = readDB();
-    const assignedEvents = db.events.filter(e => e.status === 'approved' || e.status === 'resolved');
-    res.status(200).json(assignedEvents);
+app.get('/api/events/assigned', async (req, res) => {
+    const db = await readDb();
+     res.json(db.events.filter(e => e.status === 'approved' || e.status === 'resolved'));
 });
 
+app.post('/api/events', async (req, res) => {
+    const db = await readDb();
+    const newEvent = {
+        id: db.events.length > 0 ? Math.max(...db.events.map(e => e.id)) + 1 : 1,
+        ...req.body,
+        complaints: 0,
+        status: 'pending'
+    };
+    db.events.push(newEvent);
+    await writeDb(db);
+    res.status(201).json(newEvent);
+});
 
-// Atualizar status de um evento (aprovar/recusar/resolver)
-app.put('/api/events/:id/status', (req, res) => {
+app.put('/api/events/:id/status', async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
-    const db = readDB();
-    const eventIndex = db.events.findIndex(e => e.id == id);
-
-    if (eventIndex !== -1) {
-        db.events[eventIndex].status = status;
-        writeDB(db);
-        res.status(200).json(db.events[eventIndex]);
+    const db = await readDb();
+    const event = db.events.find(e => e.id === parseInt(id));
+    if (event) {
+        event.status = status;
+        await writeDb(db);
+        res.json(event);
     } else {
-        res.status(404).json({ message: 'Evento não encontrado' });
+        res.status(404).json({ message: 'Evento não encontrado.' });
     }
 });
 
-// Adicionar uma reclamação
-app.post('/api/events/:id/complain', (req, res) => {
+app.post('/api/events/:id/complain', async (req, res) => {
     const { id } = req.params;
-    const db = readDB();
-    const eventIndex = db.events.findIndex(e => e.id == id);
-
-    if (eventIndex !== -1) {
-        db.events[eventIndex].complaints++;
-        writeDB(db);
-        res.status(200).json(db.events[eventIndex]);
+    const db = await readDb();
+    const event = db.events.find(e => e.id === parseInt(id));
+    if (event) {
+        event.complaints++;
+        await writeDb(db);
+        res.json(event);
     } else {
-        res.status(404).json({ message: 'Evento não encontrado' });
+        res.status(404).json({ message: 'Evento não encontrado.' });
     }
 });
 
-// --- ROTA DE FALLBACK ---
-// Se nenhuma rota da API for correspondida, serve o index.html
-app.get('*', (req, res) => {
-    res.sendFile(path.join(frontendPath, 'index.html'));
+app.get('/api/events/:eventId/comments', async (req, res) => {
+    const { eventId } = req.params;
+    const db = await readDb();
+    const comments = db.comments
+        .filter(c => c.eventId === parseInt(eventId))
+        .map(comment => {
+            const author = db.users.find(u => u.id === comment.authorId);
+            const { password, ...authorInfo } = author || { name: 'Desconhecido' };
+            return { ...comment, author: authorInfo };
+        });
+    res.json(comments);
+});
+
+app.post('/api/events/:eventId/comments', async (req, res) => {
+    const { eventId } = req.params;
+    const { authorId, text } = req.body;
+    const db = await readDb();
+
+    if (!authorId || !text) {
+        return res.status(400).json({ message: 'Autor e texto são obrigatórios.' });
+    }
+
+    const newComment = {
+        id: db.comments.length > 0 ? Math.max(...db.comments.map(c => c.id)) + 1 : 1,
+        eventId: parseInt(eventId),
+        authorId,
+        text
+    };
+    db.comments.push(newComment);
+    await writeDb(db);
+    
+    const author = db.users.find(u => u.id === authorId);
+    const { password, ...authorInfo } = author;
+    res.status(201).json({ ...newComment, author: authorInfo });
 });
 
 
-app.listen(PORT, () => {
-    console.log(`Servidor rodando na porta ${PORT}`);
+const PORT = 3000;
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Servidor a rodar na porta ${PORT}`);
 });
 

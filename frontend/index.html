@@ -163,7 +163,7 @@
                                 <i class="far fa-thumbs-up"></i> <span>Reclamar</span>
                             </button>
                              <button class="comments-btn flex items-center space-x-2 text-gray-600 hover:text-indigo-600 transition">
-                                <i class="far fa-comment"></i> <span>Comentar</span>
+                                <i class="far fa-comment"></i> <span class="comment-count">Comentar</span>
                             </button>
                              <button class="report-btn flex items-center space-x-2 text-gray-600 hover:text-red-500 transition">
                                 <i class="far fa-flag"></i> <span>Denunciar</span>
@@ -353,6 +353,27 @@
             </div>
         </div>
 
+        <!-- =================================== -->
+        <!-- ======= MODAL DE COMENTÁRIOS ======== -->
+        <!-- =================================== -->
+        <div id="comments-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-30 p-4">
+            <div class="bg-white rounded-2xl shadow-lg w-full max-w-lg flex flex-col" style="height: 90vh;">
+                <div class="p-4 border-b flex justify-between items-center">
+                    <h2 class="text-2xl font-bold text-gray-800">Comentários</h2>
+                    <button id="close-comments-modal-btn" class="text-gray-500 hover:text-gray-800">&times;</button>
+                </div>
+                <div id="comments-list" class="p-6 overflow-y-auto flex-grow">
+                    <!-- Comentários serão inseridos aqui -->
+                </div>
+                <div class="p-4 border-t">
+                    <form id="add-comment-form" class="flex space-x-2">
+                        <input type="text" id="comment-input" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Escreva um comentário..." required>
+                        <button type="submit" class="bg-indigo-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-indigo-700 transition">Enviar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -360,15 +381,17 @@
         // ===================================
         // =========== CONFIGURAÇÃO ===========
         // ===================================
-        const API_URL = '/api'; // MUDANÇA CRÍTICA: URL relativa para produção
+        // ATENÇÃO: Substitua pelo IP público da sua VM na Oracle Cloud.
+        const API_URL = 'http:168.138.131.47/api';
 
         // ===================================
         // =========== ESTADO DA APLICAÇÃO ===========
         // ===================================
         const appState = {
             currentUser: null,
-            currentLoginType: 'user', // 'user', 'authority', 'admin'
+            currentLoginType: 'user',
             currentFormStep: 1,
+            currentEventIdForComment: null,
         };
         
         // ===================================
@@ -389,6 +412,11 @@
         const notificationModal = document.getElementById('notification-modal');
         const notificationMessage = document.getElementById('notification-message');
         const notificationOkBtn = document.getElementById('notification-ok-btn');
+        const commentsModal = document.getElementById('comments-modal');
+        const closeCommentsModalBtn = document.getElementById('close-comments-modal-btn');
+        const addCommentForm = document.getElementById('add-comment-form');
+        const commentsList = document.getElementById('comments-list');
+        const commentInput = document.getElementById('comment-input');
 
         // ===================================
         // =========== LÓGICA DE NAVEGAÇÃO ===========
@@ -414,9 +442,8 @@
         // =========== FUNÇÕES DE RENDERIZAÇÃO ===========
         // ===================================
         
-        // Renderizar Feed do Usuário
         async function renderUserFeed() {
-            if (!appState.currentUser) return; // Verificação de segurança
+            if (!appState.currentUser) return;
             const feedContainer = document.getElementById('feed-container');
             feedContainer.innerHTML = '<p class="text-gray-500">Carregando eventos...</p>';
             
@@ -425,7 +452,7 @@
                 if (!response.ok) throw new Error('Falha ao carregar eventos');
                 const approvedEvents = await response.json();
                 
-                feedContainer.innerHTML = ''; // Limpa o "Carregando..."
+                feedContainer.innerHTML = '';
                 if (approvedEvents.length === 0) {
                     feedContainer.innerHTML = '<p class="text-gray-500">Nenhum evento para mostrar no momento.</p>';
                 }
@@ -438,6 +465,10 @@
                     card.querySelector('.event-address').textContent = event.address;
                     card.querySelector('.event-description').textContent = event.description;
                     card.querySelector('.event-complaints').textContent = `${event.complaints} reclamações`;
+                    
+                    const commentCountSpan = card.querySelector('.comment-count');
+                    commentCountSpan.textContent = event.commentCount > 0 ? `${event.commentCount} Comentários` : 'Comentar';
+
 
                     const carouselImages = card.querySelector('.carousel-images');
                     const carouselDots = card.querySelector('.carousel-dots');
@@ -492,6 +523,10 @@
                             showNotification('Não foi possível registrar a reclamação.');
                         }
                     });
+
+                    card.querySelector('.comments-btn').addEventListener('click', () => {
+                        openCommentsModal(event.id);
+                    });
                     
                     feedContainer.appendChild(card);
                 }
@@ -502,16 +537,14 @@
             }
         }
         
-        // Renderizar Painel do Administrador
         async function renderAdminDashboard() {
-            if (!appState.currentUser) return; // Verificação de segurança
+            if (!appState.currentUser) return;
             await Promise.all([
                 renderPendingEvents(),
                 renderUsersTable()
             ]);
         }
 
-        // Renderizar Eventos Pendentes para Admin
         async function renderPendingEvents() {
             const container = document.getElementById('pending-events-container');
             const template = document.getElementById('pending-event-card-template');
@@ -571,7 +604,6 @@
             }
         }
 
-        // Renderizar Tabela de Usuários para Admin
         async function renderUsersTable() {
             const tableBody = document.getElementById('users-table-body');
             const template = document.getElementById('user-row-template');
@@ -610,9 +642,8 @@
             }
         }
         
-        // Renderizar Painel da Autoridade
         async function renderAuthorityDashboard() {
-             if (!appState.currentUser) return; // Verificação de segurança
+             if (!appState.currentUser) return;
              const container = document.getElementById('authority-events-container');
              const template = document.getElementById('authority-event-card-template');
              container.innerHTML = '<p class="text-gray-500 col-span-full">Carregando...</p>';
@@ -790,7 +821,6 @@
             }
         });
 
-
         // ===================================
         // ====== LÓGICA DE CRIAR EVENTO ======
         // ===================================
@@ -899,6 +929,84 @@
             }
         });
         
+        // ===================================
+        // ====== LÓGICA DE COMENTÁRIOS ======
+        // ===================================
+        
+        async function openCommentsModal(eventId) {
+            appState.currentEventIdForComment = eventId;
+            commentsList.innerHTML = '<p class="text-gray-500">A carregar comentários...</p>';
+            commentsModal.classList.remove('hidden');
+
+            try {
+                const response = await fetch(`${API_URL}/events/${eventId}/comments`);
+                if (!response.ok) throw new Error('Não foi possível carregar os comentários.');
+                const comments = await response.json();
+                renderComments(comments);
+            } catch (error) {
+                console.error(error);
+                commentsList.innerHTML = '<p class="text-red-500">Erro ao carregar comentários.</p>';
+            }
+        }
+
+        function renderComments(comments) {
+            commentsList.innerHTML = '';
+            if (comments.length === 0) {
+                commentsList.innerHTML = '<p class="text-gray-500 text-center">Nenhum comentário ainda. Seja o primeiro!</p>';
+                return;
+            }
+            comments.forEach(comment => {
+                const commentEl = document.createElement('div');
+                commentEl.className = 'bg-gray-100 p-3 rounded-lg mb-3';
+                commentEl.innerHTML = `
+                    <p class="font-semibold text-sm text-gray-800">${comment.author.name}</p>
+                    <p class="text-gray-600">${comment.text}</p>
+                `;
+                commentsList.appendChild(commentEl);
+            });
+             commentsList.scrollTop = commentsList.scrollHeight;
+        }
+
+        closeCommentsModalBtn.addEventListener('click', () => {
+            commentsModal.classList.add('hidden');
+            appState.currentEventIdForComment = null;
+            renderUserFeed(); // Atualiza a contagem de comentários no feed
+        });
+        
+        addCommentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const commentText = commentInput.value.trim();
+            if (!commentText || !appState.currentEventIdForComment) return;
+
+            const submitButton = addCommentForm.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+
+            try {
+                const response = await fetch(`${API_URL}/events/${appState.currentEventIdForComment}/comments`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        authorId: appState.currentUser.id,
+                        text: commentText,
+                    })
+                });
+                if (!response.ok) throw new Error('Falha ao enviar comentário.');
+                
+                const newComment = await response.json();
+                
+                const currentComments = await (await fetch(`${API_URL}/events/${appState.currentEventIdForComment}/comments`)).json();
+                renderComments(currentComments);
+                
+                commentInput.value = '';
+
+            } catch (error) {
+                console.error(error);
+                showNotification('Não foi possível adicionar o seu comentário.');
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
+
         // ===================================
         // ====== LÓGICA DE NOTIFICAÇÕES ======
         // ===================================
