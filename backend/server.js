@@ -7,12 +7,17 @@ const https = require('https');
 const app = express();
 
 // --- Configuração de Segurança (CORS) ---
-// Isto permite que o seu site no GitHub Pages comunique com este servidor.
+// Esta configuração é crucial. Ela diz ao navegador que o seu frontend,
+// localizado em 'https://vitorgabrieldossantosg.github.io', tem permissão
+// para fazer pedidos a este servidor.
 const corsOptions = {
   origin: 'https://vitorgabrieldossantosg.github.io',
   optionsSuccessStatus: 200 
 };
+
+// É importante que o app.use(cors(corsOptions)) venha ANTES das suas rotas.
 app.use(cors(corsOptions));
+
 app.use(express.json({ limit: '10mb' })); // Aumenta o limite para o upload de imagens
 
 // --- Caminho para a base de dados ---
@@ -25,7 +30,7 @@ const writeDb = (data) => fs.writeFileSync(dbPath, JSON.stringify(data, null, 2)
 // --- Rotas da API ---
 const apiRouter = express.Router();
 
-// [GET] /api/users - Listar todos os usuários
+// [GET] /api/users
 apiRouter.get('/users', (req, res) => {
   try {
     const db = readDb();
@@ -35,7 +40,7 @@ apiRouter.get('/users', (req, res) => {
   }
 });
 
-// [GET] /api/events/approved - Listar eventos aprovados e resolvidos com criador
+// [GET] /api/events/approved
 apiRouter.get('/events/approved', (req, res) => {
     try {
         const db = readDb();
@@ -51,7 +56,7 @@ apiRouter.get('/events/approved', (req, res) => {
     }
 });
 
-// [GET] /api/events/pending - Listar eventos pendentes
+// [GET] /api/events/pending
 apiRouter.get('/events/pending', (req, res) => {
     try {
         const db = readDb();
@@ -62,11 +67,10 @@ apiRouter.get('/events/pending', (req, res) => {
     }
 });
 
-// [GET] /api/events/assigned - Listar eventos para autoridades
+// [GET] /api/events/assigned
 apiRouter.get('/events/assigned', (req, res) => {
     try {
         const db = readDb();
-        // Lógica simples: autoridades veem todos os eventos não pendentes
         const assignedEvents = db.events.filter(e => e.status === 'approved' || e.status === 'resolved');
         res.json(assignedEvents);
     } catch (error) {
@@ -74,7 +78,7 @@ apiRouter.get('/events/assigned', (req, res) => {
     }
 });
 
-// [POST] /api/events/:id/complain - Adicionar uma reclamação
+// [POST] /api/events/:id/complain
 apiRouter.post('/events/:id/complain', (req, res) => {
     try {
         const db = readDb();
@@ -91,7 +95,7 @@ apiRouter.post('/events/:id/complain', (req, res) => {
     }
 });
 
-// [PUT] /api/events/:id/status - Mudar o estado de um evento
+// [PUT] /api/events/:id/status
 apiRouter.put('/events/:id/status', (req, res) => {
     const { status } = req.body;
     const validStatuses = ['approved', 'denied', 'resolved'];
@@ -104,7 +108,7 @@ apiRouter.put('/events/:id/status', (req, res) => {
         const eventIndex = db.events.findIndex(e => e.id === parseInt(req.params.id));
         if (eventIndex !== -1) {
             if (status === 'denied') {
-                db.events.splice(eventIndex, 1); // Remove se for negado
+                db.events.splice(eventIndex, 1);
             } else {
                 db.events[eventIndex].status = status;
             }
@@ -118,7 +122,7 @@ apiRouter.put('/events/:id/status', (req, res) => {
     }
 });
 
-// [POST] /api/events - Criar novo evento
+// [POST] /api/events
 apiRouter.post('/events', (req, res) => {
     const { creatorId, title, description, address, imageUrls } = req.body;
     if (!creatorId || !title || !description || !address) {
@@ -145,14 +149,13 @@ apiRouter.post('/events', (req, res) => {
     }
 });
 
-// [POST] /api/auth/login - Autenticação
+// [POST] /api/auth/login
 apiRouter.post('/auth/login', (req, res) => {
     const { email, password, type } = req.body;
     try {
         const db = readDb();
         const user = db.users.find(u => u.email === email && u.password === password && u.type === type);
         if (user) {
-            // Não enviar a senha de volta
             const { password, ...userWithoutPassword } = user;
             res.json(userWithoutPassword);
         } else {
@@ -163,7 +166,7 @@ apiRouter.post('/auth/login', (req, res) => {
     }
 });
 
-// [POST] /api/auth/register - Registo de novo usuário
+// [POST] /api/auth/register
 apiRouter.post('/auth/register', (req, res) => {
     const { name, email, password, type, code } = req.body;
     const accessCodes = { admin: 'admin123', authority: 'Aut123' };
@@ -183,14 +186,14 @@ apiRouter.post('/auth/register', (req, res) => {
         };
         db.users.push(newUser);
         writeDb(db);
-        res.status(201).json({ message: "Usuário registado com sucesso." });
+        res.status(201).json({ message: "Utilizador registado com sucesso." });
     } catch (error) {
-        res.status(500).json({ message: "Erro ao registar o usuário." });
+        res.status(500).json({ message: "Erro ao registar o utilizador." });
     }
 });
 
 
-// [GET] /api/events/:eventId/comments - Obter comentários de um evento
+// [GET] /api/events/:eventId/comments
 apiRouter.get('/events/:eventId/comments', (req, res) => {
     try {
         const db = readDb();
@@ -207,7 +210,7 @@ apiRouter.get('/events/:eventId/comments', (req, res) => {
     }
 });
 
-// [POST] /api/events/:eventId/comments - Adicionar um novo comentário
+// [POST] /api/events/:eventId/comments
 apiRouter.post('/events/:eventId/comments', (req, res) => {
     const { authorId, text } = req.body;
     const eventId = parseInt(req.params.eventId);
@@ -246,7 +249,7 @@ const httpsOptions = {
     cert: fs.readFileSync(`/etc/letsencrypt/live/app-acao-cidada-vitor.duckdns.org/fullchain.pem`)
 };
 
-const PORT = 443; // A porta padrão para HTTPS
+const PORT = 443;
 
 https.createServer(httpsOptions, app).listen(PORT, () => {
     console.log(`Servidor HTTPS a rodar de forma segura na porta ${PORT}`);
