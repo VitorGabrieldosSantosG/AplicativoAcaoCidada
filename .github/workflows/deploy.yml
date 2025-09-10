@@ -1,0 +1,46 @@
+
+# Nome do Workflow que aparecerá no separador "Actions" do GitHub
+name: Deploy Frontend to GitHub Pages
+
+# Define quando este workflow deve ser executado
+on:
+  # Executa sempre que houver um 'push' para a branch 'main'
+  push:
+    branches:
+      - master # Mude para 'master' se for o nome da sua branch principal
+
+# Define as permissões necessárias para o workflow
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Define as tarefas a serem executadas
+jobs:
+  # Tarefa de deploy
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Baixa o código do seu repositório
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Especifica que o site está na pasta 'frontend'
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      
+      # 3. Constrói o artefacto do site a partir da pasta 'frontend'
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Pasta a ser publicada
+          path: './frontend'
+
+      # 4. Faz o deploy do artefacto para o GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
